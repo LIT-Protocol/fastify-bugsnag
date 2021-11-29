@@ -1,7 +1,7 @@
-const Bugsnag = require('@bugsnag/js')
-const fp = require('fastify-plugin')
+const Bugsnag = require("@bugsnag/js");
+const fp = require("fastify-plugin");
 
-function extractRequestMetadata (request) {
+function extractRequestMetadata(request) {
   return {
     body: request.body,
     clientIp: request.ips && request.ips[0] ? request.ips[0] : request.ip,
@@ -11,12 +11,12 @@ function extractRequestMetadata (request) {
     path: request.routerPath,
     query: request.query,
     referer: request.raw.headers.referer,
-    url: request.url
-  }
+    url: request.url,
+  };
 }
 
-function obtainRequestAndMetadataInfo (request) {
-  const metadata = extractRequestMetadata(request)
+function obtainRequestAndMetadataInfo(request) {
+  const metadata = extractRequestMetadata(request);
 
   return {
     metadata,
@@ -25,40 +25,48 @@ function obtainRequestAndMetadataInfo (request) {
       headers: metadata.headers,
       httpMethod: metadata.httpMethod,
       referer: metadata.referer,
-      url: metadata.url
-    }
-  }
+      url: metadata.url,
+    },
+  };
 }
 
-function bugsnagPlugin (fastify, options, done) {
-  Bugsnag.start(options)
+function bugsnagPlugin(fastify, options, done) {
+  Bugsnag.start(options);
 
-  fastify.decorate('bugsnag', Bugsnag)
-  fastify.decorateRequest('bugsnag', null)
+  fastify.decorate("bugsnag", Bugsnag);
+  fastify.decorateRequest("bugsnag", null);
 
-  fastify.addHook('onRequest', function decorateRequestInstance (request, reply, next) {
-    request.bugsnag = Bugsnag
+  fastify.addHook(
+    "onRequest",
+    function decorateRequestInstance(request, reply, next) {
+      request.bugsnag = Bugsnag;
 
-    next()
-  })
-
-  fastify.addHook('onError', function bugsnagErrorHandlerPlugin (request, reply, error, next) {
-    if (options.enableReporting) {
-      this.bugsnag.notify(error, event => {
-        const { metadata, request: requestData } = obtainRequestAndMetadataInfo(request)
-        event.request = requestData
-
-        event.addMetadata('request', metadata)
-      })
+      next();
     }
+  );
 
-    next()
-  })
+  fastify.addHook(
+    "onError",
+    function bugsnagErrorHandlerPlugin(request, reply, error, next) {
+      console.log("Fastify error: ", error);
+      if (options.enableReporting) {
+        this.bugsnag.notify(error, (event) => {
+          const { metadata, request: requestData } =
+            obtainRequestAndMetadataInfo(request);
+          event.request = requestData;
 
-  done()
+          event.addMetadata("request", metadata);
+        });
+      }
+
+      next();
+    }
+  );
+
+  done();
 }
 
 module.exports = fp(bugsnagPlugin, {
-  name: 'fastify-bugsnag',
-  fastify: '>=3.x'
-})
+  name: "fastify-bugsnag",
+  fastify: ">=3.x",
+});
